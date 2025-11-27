@@ -1,0 +1,5 @@
+*.backup
+index_v1.html
+index_clean.html
+INSTRUCTIONS.txt
+START_SERVER.bat
