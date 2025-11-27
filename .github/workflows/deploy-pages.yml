@@ -1,0 +1,59 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build:
+    name: Build and prepare artifact
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js (optional)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install & build (if package.json exists)
+        run: |
+          if [ -f package.json ]; then
+            npm ci
+            npm run build
+          else
+            echo "No package.json found — skipping Node build"
+          fi
+
+      - name: Determine publish directory
+        id: determine
+        run: |
+          if [ -d "./public" ]; then
+            echo "path=public" >> $GITHUB_OUTPUT
+          elif [ -d "./docs" ]; then
+            echo "path=docs" >> $GITHUB_OUTPUT
+          elif [ -d "./dist" ]; then
+            echo "path=dist" >> $GITHUB_OUTPUT
+          else
+            echo "path=." >> $GITHUB_OUTPUT
+          fi
+
+      - name: Upload artifact for GitHub Pages
+        uses: actions/upload-pages-artifact@v1
+        with:
+          path: ${{ steps.determine.outputs.path }}
+
+  deploy:
+    name: Deploy to GitHub Pages
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy
+        uses: actions/deploy-pages@v1
