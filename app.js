@@ -1,4 +1,5 @@
-// Full app.js with mobile fixes: marker touch handlers, popupopen, console logs, and invalidateSize call.
+// Full app.js (complete). Includes mobile fixes: touch handlers, popupopen, console logs, invalidateSize call,
+// sidebar behavior, date picker and photo upload (persisted to localStorage).
 
 const { useState, useEffect, useMemo } = React;
 
@@ -39,14 +40,14 @@ const RaceList = ({ races, onSelectRace, completedRaces, onOpenSidebar }) => {
 const RaceMap = ({ races, selectedRace, onSelectRace, onOpenSidebar, completedRaces }) => {
   // Initialize map
   useEffect(() => {
-    // Prevent duplicate map instances
+    // Prevent duplicate map instances (important when Pages reloads script)
     if (window.mapInstance) {
       try { window.mapInstance.remove(); } catch (e) {}
       window.mapInstance = null;
       window.markers = null;
     }
 
-    // Check container exists
+    // Ensure container exists
     if (!document.getElementById('map')) return;
 
     const map = L.map('map', {
@@ -103,10 +104,9 @@ const RaceMap = ({ races, selectedRace, onSelectRace, onOpenSidebar, completedRa
         }, 300);
       };
 
-      // Listen for both click and touchstart (mobile)
+      // Listen for both click and touchstart (mobile) and popupopen
       marker.on('click', openSidebarHandler);
       marker.on('touchstart', openSidebarHandler);
-      // Also open sidebar when popup opens (some touch flows)
       marker.on('popupopen', openSidebarHandler);
 
       markers.push({ id: race.id, marker });
@@ -124,7 +124,7 @@ const RaceMap = ({ races, selectedRace, onSelectRace, onOpenSidebar, completedRa
     };
   }, [races, completedRaces, onSelectRace, onOpenSidebar]);
 
-  // Update markers when completedRaces changes (colors)
+  // Update marker icons when completedRaces changes
   useEffect(() => {
     if (window.markers) {
       window.markers.forEach(({ id, marker }) => {
@@ -146,21 +146,259 @@ const RaceMap = ({ races, selectedRace, onSelectRace, onOpenSidebar, completedRa
           iconSize: [12, 12],
           iconAnchor: [6, 6]
         });
-        marker.setIcon(icon);
+        try { marker.setIcon(icon); } catch (e) { /* ignore if marker removed */ }
       });
     }
   }, [completedRaces]);
 
-  // Fly to selected race
+  // Fly to selected race and open popup
   useEffect(() => {
     if (selectedRace && window.mapInstance) {
-      window.mapInstance.flyTo([selectedRace.lat, selectedRace.lng], 10);
-
+      try {
+        window.mapInstance.flyTo([selectedRace.lat, selectedRace.lng], 10);
+      } catch (e) {}
       const markerObj = window.markers && window.markers.find(m => m.id === selectedRace.id);
       if (markerObj) {
-        markerObj.marker.openPopup();
+        try { markerObj.marker.openPopup(); } catch (e) {}
       }
     }
   }, [selectedRace]);
 
-  return <div id="map" style={{ height: '
+  return <div id="map" style={{ height: '100%', width: '100%' }} />;
+};
+
+const RaceDetailsModal = ({ race, onClose, onSave, completedData }) => {
+  const [dateCompleted, setDateCompleted] = useState(completedData?.dateCompleted || '');
+  const [review, setReview] = useState(completedData?.review || '');
+  const [photoUrl, setPhotoUrl] = useState(completedData?.photoUrl || '');
+
+  useEffect(() => {
+    setDateCompleted(completedData?.dateCompleted || '');
+    setReview(completedData?.review || '');
+    setPhotoUrl(completedData?.photoUrl || '');
+  }, [completedData]);
+
+  const handleFileChange = (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      setPhotoUrl(reader.result);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!dateCompleted) {
+      alert('Please pick the date you completed (or the race date).');
+      return;
+    }
+    onSave(race.id, { dateCompleted, review, photoUrl });
+    onClose();
+  };
+
+  if (!race) return null;
+
+  return (
+    <div className="modal-overlay" role="dialog" aria-modal="true">
+      <div className="modal">
+        <div className="modal-header">
+          <h2>{race.name}</h2>
+          <button className="close-btn" onClick={onClose}>&times;</button>
+        </div>
+
+        <div className="race-info" style={{ marginBottom: '1.5rem' }}>
+          <p><strong>Next Race Date:</strong> {race.date}</p>
+          <p><strong>Location:</strong> {race.location}</p>
+          <p><strong>Distance:</strong> {race.distance}</p>
+        </div>
+
+        {completedData ? (
+          <div>
+            <div className="badge" style={{ display: 'inline-block', marginBottom: '1rem', fontSize: '1rem' }}>
+              ✓ Race Completed
+            </div>
+
+            {completedData.dateCompleted && (
+              <p style={{ color: 'var(--text-muted)', marginBottom: '0.5rem' }}>
+                <strong>Completed on:</strong> {new Date(completedData.dateCompleted).toLocaleDateString()}
+              </p>
+            )}
+
+            {completedData.review && (
+              <div className="review-display">
+                <p className="review-text">"{completedData.review}"</p>
+              </div>
+            )}
+
+            {completedData.photoUrl && (
+              <img src={completedData.photoUrl} alt="Race memory" className="review-img" />
+            )}
+
+            <button
+              className="action-btn"
+              style={{ marginTop: '1rem', background: '#ef4444', color: 'white' }}
+              onClick={() => {
+                onSave(race.id, null); // Delete/Unpin
+                onClose();
+              }}
+            >
+              Remove Pin
+            </button>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit}>
+            <div className="form-group">
+              <label>When did you finish this race?</label>
+              <input
+                type="date"
+                className="form-control"
+                value={dateCompleted}
+                onChange={e => setDateCompleted(e.target.value)}
+                required
+              />
+            </div>
+
+            <div className="form-group">
+              <label>Your Review (Optional)</label>
+              <textarea
+                className="form-control"
+                value={review}
+                onChange={e => setReview(e.target.value)}
+                placeholder="How was the course? The atmosphere?"
+              />
+            </div>
+
+            <div className="form-group">
+              <label>Photo (upload from device)</label>
+              <input
+                type="file"
+                accept="image/*"
+                className="form-control"
+                onChange={handleFileChange}
+              />
+              {photoUrl && <img src={photoUrl} alt="preview" className="review-img" style={{ marginTop: '0.75rem' }} />}
+            </div>
+
+            <button type="submit" className="btn-submit">Save</button>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+};
+
+const App = () => {
+  const [races, setRaces] = useState(window.initialRaces || []);
+  const [filter, setFilter] = useState('All');
+  const [selectedRace, setSelectedRace] = useState(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [completedRaces, setCompletedRaces] = useState(() => {
+    try {
+      const saved = localStorage.getItem('my-running-map-data');
+      return saved ? JSON.parse(saved) : {};
+    } catch (e) {
+      return {};
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('my-running-map-data', JSON.stringify(completedRaces));
+    } catch (e) {}
+  }, [completedRaces]);
+
+  const filteredRaces = useMemo(() => {
+    if (filter === 'All') return races;
+    return races.filter(r => r.distance === filter);
+  }, [races, filter]);
+
+  const handleSaveRace = (raceId, data) => {
+    setCompletedRaces(prev => {
+      if (data === null) {
+        const newState = { ...prev };
+        delete newState[raceId];
+        return newState;
+      }
+      return { ...prev, [raceId]: data };
+    });
+  };
+
+  const completedCount = Object.keys(completedRaces).length;
+
+  return (
+    <React.Fragment>
+      <header>
+        <div>
+          <h1>My Running Map 🏃‍♂️</h1>
+          <div className="stats">
+            You have completed <strong>{completedCount}</strong> races!
+          </div>
+        </div>
+        <a href="https://github.com" target="_blank" rel="noreferrer" style={{ color: 'var(--text-muted)', textDecoration: 'none' }}>
+          About
+        </a>
+      </header>
+
+      <main>
+        <div className={`sidebar-wrapper ${sidebarOpen ? 'active' : ''}`}>
+          <div className="sidebar">
+            <button
+              className="sidebar-close"
+              onClick={() => setSidebarOpen(false)}
+              title="Close sidebar"
+            >
+              ×
+            </button>
+            <div className="sidebar-header">
+              <h3>Races</h3>
+              <div className="filter-container">
+                <select
+                  className="filter-select"
+                  value={filter}
+                  onChange={(e) => setFilter(e.target.value)}
+                >
+                  <option value="All">All Distances</option>
+                  <option value="Full">Full Marathon</option>
+                  <option value="Half">Half Marathon</option>
+                </select>
+              </div>
+            </div>
+            <RaceList
+              races={filteredRaces}
+              onSelectRace={(race) => {
+                setSelectedRace(race);
+                setSidebarOpen(true);
+              }}
+              completedRaces={completedRaces}
+              onOpenSidebar={() => setSidebarOpen(true)}
+            />
+          </div>
+        </div>
+
+        <div className="map-container">
+          <RaceMap
+            races={filteredRaces}
+            selectedRace={selectedRace}
+            onSelectRace={(race) => { setSelectedRace(race); }}
+            onOpenSidebar={() => setSidebarOpen(true)}
+            completedRaces={completedRaces}
+          />
+        </div>
+      </main>
+
+      {selectedRace && (
+        <RaceDetailsModal
+          race={selectedRace}
+          onClose={() => setSelectedRace(null)}
+          onSave={handleSaveRace}
+          completedData={completedRaces[selectedRace.id]}
+        />
+      )}
+    </React.Fragment>
+  );
+};
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
