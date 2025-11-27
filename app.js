@@ -1,6 +1,10 @@
-// Full app.js (complete). Includes mobile fixes: touch handlers, popupopen, console logs, invalidateSize call,
-// sidebar behavior, date picker and photo upload (persisted to localStorage).
-
+// Full app.js (mobile panning fixes included).
+// Key changes:
+// - Removed strict maxBounds / maxBoundsViscosity that prevented smooth panning on mobile
+// - Enabled map.dragging, touchZoom, tap, doubleClickZoom explicitly
+// - Added worldCopyJump and a short invalidateSize() after sidebar opens
+// - Added console.log markers for mobile remote debugging
+// - Preserves date picker and photo upload behavior (localStorage)
 const { useState, useEffect, useMemo } = React;
 
 // --- Components ---
@@ -40,28 +44,39 @@ const RaceList = ({ races, onSelectRace, completedRaces, onOpenSidebar }) => {
 const RaceMap = ({ races, selectedRace, onSelectRace, onOpenSidebar, completedRaces }) => {
   // Initialize map
   useEffect(() => {
-    // Prevent duplicate map instances (important when Pages reloads script)
+    // Prevent duplicate map instances
     if (window.mapInstance) {
       try { window.mapInstance.remove(); } catch (e) {}
       window.mapInstance = null;
       window.markers = null;
     }
 
-    // Ensure container exists
+    // Check container exists
     if (!document.getElementById('map')) return;
 
     const map = L.map('map', {
       minZoom: 2,
-      maxBounds: [[-90, -180], [90, 180]],
-      maxBoundsViscosity: 1.0
+      worldCopyJump: true, // help panning across antimeridian
+      // relaxed bounds (avoid strict maxBounds that can block panning on mobile)
+      // maxBounds: [[-90, -180], [90, 180]],
+      // maxBoundsViscosity: 0.5,
     }).setView([39.8283, -98.5795], 4); // Center of USA
 
+    // Ensure mobile interactions are enabled
+    try {
+      map.dragging && map.dragging.enable();
+      map.touchZoom && map.touchZoom.enable();
+      map.doubleClickZoom && map.doubleClickZoom.enable();
+      map.boxZoom && map.boxZoom.enable();
+      if (map.tap && typeof map.tap.enable === 'function') map.tap.enable();
+    } catch (e) { /* ignore */ }
+
+    // Tile layer
     L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
       attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
       subdomains: 'abcd',
       maxZoom: 19,
-      noWrap: true,
-      bounds: [[-90, -180], [90, 180]]
+      noWrap: true
     }).addTo(map);
 
     // Add markers
@@ -92,19 +107,18 @@ const RaceMap = ({ races, selectedRace, onSelectRace, onOpenSidebar, completedRa
         .addTo(map)
         .bindPopup(`<b>${race.name}</b><br>${race.location}`);
 
-      // Handler used for click/tap/popupopen
       const openSidebarHandler = () => {
-        // debug log to help mobile remote debugging
+        // debug log for mobile remote debugging
         console.log('marker tapped', race.id);
         onSelectRace(race);
         onOpenSidebar();
-        // ensure map layout adjusts after sidebar opens
+        // Recalculate size after sidebar opens so tiles & controls layout correctly
         setTimeout(() => {
           try { map.invalidateSize(); } catch (e) {}
         }, 300);
       };
 
-      // Listen for both click and touchstart (mobile) and popupopen
+      // Listen for click, touchstart and popupopen to cover multiple mobile flows
       marker.on('click', openSidebarHandler);
       marker.on('touchstart', openSidebarHandler);
       marker.on('popupopen', openSidebarHandler);
@@ -116,15 +130,18 @@ const RaceMap = ({ races, selectedRace, onSelectRace, onOpenSidebar, completedRa
     window.mapInstance = map;
     window.markers = markers;
 
+    // small deferred invalidate (helpful on mobile when UI overlays change)
+    setTimeout(() => { try { map.invalidateSize(); } catch (e) {} }, 250);
+
     return () => {
       if (window.mapInstance) {
-        window.mapInstance.remove();
+        try { window.mapInstance.remove(); } catch (e) {}
         window.mapInstance = null;
       }
     };
   }, [races, completedRaces, onSelectRace, onOpenSidebar]);
 
-  // Update marker icons when completedRaces changes
+  // Update markers when completedRaces changes (colors)
   useEffect(() => {
     if (window.markers) {
       window.markers.forEach(({ id, marker }) => {
@@ -146,7 +163,7 @@ const RaceMap = ({ races, selectedRace, onSelectRace, onOpenSidebar, completedRa
           iconSize: [12, 12],
           iconAnchor: [6, 6]
         });
-        try { marker.setIcon(icon); } catch (e) { /* ignore if marker removed */ }
+        try { marker.setIcon(icon); } catch (e) { /* ignore if removed */ }
       });
     }
   }, [completedRaces]);
@@ -154,9 +171,7 @@ const RaceMap = ({ races, selectedRace, onSelectRace, onOpenSidebar, completedRa
   // Fly to selected race and open popup
   useEffect(() => {
     if (selectedRace && window.mapInstance) {
-      try {
-        window.mapInstance.flyTo([selectedRace.lat, selectedRace.lng], 10);
-      } catch (e) {}
+      try { window.mapInstance.flyTo([selectedRace.lat, selectedRace.lng], 10); } catch (e) {}
       const markerObj = window.markers && window.markers.find(m => m.id === selectedRace.id);
       if (markerObj) {
         try { markerObj.marker.openPopup(); } catch (e) {}
