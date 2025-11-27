@@ -1,702 +1,359 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>My Running Map</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>My Running Map</title>
 
-    <!-- Leaflet CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
 
-    <!-- Google Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
-    <!-- React & ReactDOM -->
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <!-- React & ReactDOM -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
 
-    <!-- Babel for JSX -->
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <!-- Babel for JSX (runtime transpile) -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-    <!-- Leaflet JS -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 
-    <style>
-        /* (kept your original CSS unchanged) */
-        :root {
-            --primary: #2563eb;
-            --primary-hover: #1d4ed8;
-            --bg-dark: #0f172a;
-            --bg-card: #1e293b;
-            --text-main: #f8fafc;
-            --text-muted: #94a3b8;
-            --accent: #38bdf8;
-            --success: #22c55e;
-            --border: #334155;
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: var(--bg-dark);
-            color: var(--text-main);
-            line-height: 1.5;
-            overflow: hidden;
-        }
-
-        #root {
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-        }
-
-        header {
-            background-color: var(--bg-card);
-            padding: 1rem 2rem;
-            border-bottom: 1px solid var(--border);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-            z-index: 1000;
-            height: 70px;
-        }
-
-        h1 {
-            font-size: 1.5rem;
-            font-weight: 700;
-            background: linear-gradient(to right, var(--accent), var(--primary));
-            -webkit-background-clip: text;
-            background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        .stats {
-            font-size: 0.9rem;
-            color: var(--text-muted);
-        }
-
-        .stats strong {
-            color: var(--success);
-        }
-
-        main {
-            display: flex;
-            flex: 1;
-            position: relative;
-            height: calc(100vh - 70px);
-        }
-
-        .sidebar-wrapper {
-            position: absolute;
-            top: 0;
-            left: 0;
-            height: 100%;
-            z-index: 1002;
-        }
-
-        .sidebar {
-            width: 400px;
-            background-color: var(--bg-dark);
-            border-right: 1px solid var(--border);
-            display: flex;
-            flex-direction: column;
-            transform: translateX(-100%);
-            transition: transform 0.3s ease-in-out;
-            box-shadow: 4px 0 10px rgba(0, 0, 0, 0.3);
-            height: 100%;
-        }
-
-        .sidebar-wrapper.active .sidebar {
-            transform: translateX(0);
-        }
-
-        .sidebar-close {
-            position: absolute;
-            top: 1rem;
-            right: 1rem;
-            background: var(--bg-dark);
-            border: 1px solid var(--border);
-            color: var(--text-muted);
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.25rem;
-            z-index: 10;
-        }
-
-        .sidebar-close:hover {
-            background: var(--border);
-            color: var(--text-main);
-        }
-
-        .sidebar-header {
-            padding: 1rem;
-            border-bottom: 1px solid var(--border);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: var(--bg-card);
-        }
-
-        .sidebar-header h3 {
-            font-size: 1.25rem;
-            font-weight: 600;
-        }
-
-        .filter-select {
-            background: var(--bg-dark);
-            color: var(--text-main);
-            border: 1px solid var(--border);
-            padding: 0.5rem;
-            border-radius: 0.5rem;
-            font-family: inherit;
-            font-size: 0.875rem;
-            cursor: pointer;
-            outline: none;
-        }
-
-        .race-list {
-            flex: 1;
-            overflow-y: auto;
-            padding: 1rem;
-        }
-
-        .race-card {
-            background-color: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 0.75rem;
-            padding: 1rem;
-            margin-bottom: 1rem;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-
-        .race-card:hover {
-            transform: translateY(-2px);
-            border-color: var(--accent);
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
-        }
-
-        .race-card.completed {
-            border-color: var(--success);
-            background: rgba(34, 197, 94, 0.05);
-        }
-
-        .race-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 0.5rem;
-        }
-
-        .race-name {
-            font-weight: 600;
-            font-size: 1.1rem;
-            color: var(--text-main);
-        }
-
-        .race-details {
-            display: flex;
-            flex-direction: column;
-            gap: 0.25rem;
-            font-size: 0.875rem;
-            color: var(--text-muted);
-            margin-bottom: 0.75rem;
-        }
-
-        .map-container {
-            width: 100%;
-            height: 100%;
-            background-color: #262626;
-            position: relative;
-        }
-
-        #map {
-            height: 100%;
-            width: 100%;
-        }
-
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.7);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 2000;
-            backdrop-filter: blur(4px);
-        }
-
-        .modal {
-            background: var(--bg-card);
-            width: 90%;
-            max-width: 500px;
-            border-radius: 1rem;
-            padding: 2rem;
-            border: 1px solid var(--border);
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-        }
-
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1.5rem;
-        }
-
-        .close-btn {
-            background: none;
-            border: none;
-            color: var(--text-muted);
-            font-size: 1.5rem;
-            cursor: pointer;
-        }
-
-        .form-group {
-            margin-bottom: 1rem;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 0.5rem;
-            font-size: 0.875rem;
-            color: var(--text-muted);
-        }
-
-        .form-control {
-            width: 100%;
-            padding: 0.75rem;
-            background: var(--bg-dark);
-            border: 1px solid var(--border);
-            border-radius: 0.5rem;
-            color: white;
-            font-family: inherit;
-        }
-
-        .form-control:focus {
-            outline: none;
-            border-color: var(--accent);
-        }
-
-        textarea.form-control {
-            min-height: 100px;
-            resize: vertical;
-        }
-
-        .btn-submit {
-            width: 100%;
-            padding: 0.75rem;
-            background: var(--success);
-            color: white;
-            border: none;
-            border-radius: 0.5rem;
-            font-weight: 600;
-            cursor: pointer;
-        }
-
-        .action-btn {
-            width: 100%;
-            padding: 0.5rem;
-            border-radius: 0.5rem;
-            border: none;
-            font-weight: 500;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-
-        .btn-view {
-            background-color: var(--bg-dark);
-            color: var(--text-main);
-            border: 1px solid var(--border);
-        }
-
-        .btn-view:hover {
-            background-color: var(--border);
-        }
-
-        .review-display {
-            background: var(--bg-dark);
-            padding: 1rem;
-            border-radius: 0.5rem;
-            margin-top: 1rem;
-        }
-
-        .review-text {
-            font-style: italic;
-            color: var(--text-muted);
-            margin-bottom: 0.5rem;
-        }
-
-        .review-img {
-            width: 100%;
-            height: 200px;
-            object-fit: cover;
-            border-radius: 0.5rem;
-            margin-top: 0.5rem;
-        }
-
-        .badge {
-            background: rgba(56, 189, 248, 0.1);
-            color: var(--accent);
-            padding: 0.125rem 0.5rem;
-            border-radius: 4px;
-            font-size: 0.75rem;
-            font-weight: 500;
-        }
-    </style>
+  <style>
+    /* Your existing CSS (kept as-is) */
+    :root { --primary: #2563eb; --primary-hover: #1d4ed8; --bg-dark: #0f172a; --bg-card: #1e293b; --text-main: #f8fafc; --text-muted: #94a3b8; --accent: #38bdf8; --success: #22c55e; --border: #334155; }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Inter',sans-serif;background-color:var(--bg-dark);color:var(--text-main);line-height:1.5;overflow:hidden}
+    #root{display:flex;flex-direction:column;height:100vh}
+    header{background-color:var(--bg-card);padding:1rem 2rem;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;box-shadow:0 4px 6px -1px rgba(0,0,0,0.1);z-index:1000;height:70px}
+    h1{font-size:1.5rem;font-weight:700;background:linear-gradient(to right,var(--accent),var(--primary));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+    .stats{font-size:.9rem;color:var(--text-muted)}
+    .stats strong{color:var(--success)}
+    main{display:flex;flex:1;position:relative;height:calc(100vh - 70px)}
+    .sidebar-wrapper{position:absolute;top:0;left:0;height:100%;z-index:1002}
+    .sidebar{width:400px;background-color:var(--bg-dark);border-right:1px solid var(--border);display:flex;flex-direction:column;transform:translateX(-100%);transition:transform .3s ease-in-out;box-shadow:4px 0 10px rgba(0,0,0,0.3);height:100%}
+    .sidebar-wrapper.active .sidebar{transform:translateX(0)}
+    .sidebar-close{position:absolute;top:1rem;right:1rem;background:var(--bg-dark);border:1px solid var(--border);color:var(--text-muted);width:32px;height:32px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:1.25rem;z-index:10}
+    .sidebar-close:hover{background:var(--border);color:var(--text-main)}
+    .sidebar-header{padding:1rem;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;background:var(--bg-card)}
+    .sidebar-header h3{font-size:1.25rem;font-weight:600}
+    .filter-select{background:var(--bg-dark);color:var(--text-main);border:1px solid var(--border);padding:.5rem;border-radius:.5rem;font-family:inherit;font-size:.875rem;cursor:pointer;outline:none}
+    .race-list{flex:1;overflow-y:auto;padding:1rem}
+    .race-card{background-color:var(--bg-card);border:1px solid var(--border);border-radius:.75rem;padding:1rem;margin-bottom:1rem;cursor:pointer;transition:all .2s ease}
+    .race-card:hover{transform:translateY(-2px);border-color:var(--accent);box-shadow:0 4px 6px -1px rgba(0,0,0,.2)}
+    .race-card.completed{border-color:var(--success);background:rgba(34,197,94,.05)}
+    .race-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:.5rem}
+    .race-name{font-weight:600;font-size:1.1rem;color:var(--text-main)}
+    .race-details{display:flex;flex-direction:column;gap:.25rem;font-size:.875rem;color:var(--text-muted);margin-bottom:.75rem}
+    .map-container{width:100%;height:100%;background-color:#262626;position:relative}
+    #map{height:100%;width:100%}
+    .modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.7);display:flex;justify-content:center;align-items:center;z-index:2000;backdrop-filter:blur(4px)}
+    .modal{background:var(--bg-card);width:90%;max-width:500px;border-radius:1rem;padding:2rem;border:1px solid var(--border);box-shadow:0 20px 25px -5px rgba(0,0,0,.1)}
+    .modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem}
+    .close-btn{background:none;border:none;color:var(--text-muted);font-size:1.5rem;cursor:pointer}
+    .form-group{margin-bottom:1rem}
+    .form-group label{display:block;margin-bottom:.5rem;font-size:.875rem;color:var(--text-muted)}
+    .form-control{width:100%;padding:.75rem;background:var(--bg-dark);border:1px solid var(--border);border-radius:.5rem;color:white;font-family:inherit}
+    .form-control:focus{outline:none;border-color:var(--accent)}
+    textarea.form-control{min-height:100px;resize:vertical}
+    .btn-submit{width:100%;padding:.75rem;background:var(--success);color:white;border:none;border-radius:.5rem;font-weight:600;cursor:pointer}
+    .action-btn{width:100%;padding:.5rem;border-radius:.5rem;border:none;font-weight:500;cursor:pointer;transition:background .2s}
+    .btn-view{background-color:var(--bg-dark);color:var(--text-main);border:1px solid var(--border)}
+    .btn-view:hover{background-color:var(--border)}
+    .review-display{background:var(--bg-dark);padding:1rem;border-radius:.5rem;margin-top:1rem}
+    .review-text{font-style:italic;color:var(--text-muted);margin-bottom:.5rem}
+    .review-img{width:100%;height:200px;object-fit:cover;border-radius:.5rem;margin-top:.5rem}
+    .badge{background:rgba(56,189,248,.1);color:var(--accent);padding:.125rem .5rem;border-radius:4px;font-size:.75rem;font-weight:500}
+  </style>
 </head>
 
 <body>
-    <div id="root"></div>
+  <div id="root"></div>
 
-    <script>
-        window.initialRaces = [
-            /* (kept your initialRaces array exactly the same) */
-        ];
-    </script>
+  <!-- initialRaces must be defined before app.js runs -->
+  <script>
+    window.initialRaces = [
+      {
+        id: 1,
+        name: "Boston Marathon",
+        date: "2025-04-21",
+        location: "Boston, MA",
+        distance: "Full",
+        lat: 42.3601,
+        lng: -71.0589,
+        image: "https://images.unsplash.com/photo-1552674605-469523254d5d?auto=format&fit=crop&q=80&w=1000"
+      },
+      {
+        id: 2,
+        name: "New York City Marathon",
+        date: "2025-11-02",
+        location: "New York, NY",
+        distance: "Full",
+        lat: 40.7128,
+        lng: -74.0060,
+        image: "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&q=80&w=1000"
+      },
+      {
+        id: 3,
+        name: "Chicago Marathon",
+        date: "2025-10-12",
+        location: "Chicago, IL",
+        distance: "Full",
+        lat: 41.8781,
+        lng: -87.6298,
+        image: "https://images.unsplash.com/photo-1505373877733-3e648b49f21b?auto=format&fit=crop&q=80&w=1000"
+      },
+      {
+        id: 4,
+        name: "Big Sur International Marathon",
+        date: "2025-04-27",
+        location: "Big Sur, CA",
+        distance: "Full",
+        lat: 36.2704,
+        lng: -121.8081,
+        image: "https://images.unsplash.com/photo-1516214104703-d870798883c5?auto=format&fit=crop&q=80&w=1000"
+      },
+      {
+        id: 5,
+        name: "Brooklyn Half Marathon",
+        date: "2025-05-17 (TBD)",
+        location: "Brooklyn, NY",
+        distance: "Half",
+        lat: 40.6782,
+        lng: -73.9442,
+        image: "https://images.unsplash.com/photo-1596727147705-54a9d0c2067d?auto=format&fit=crop&q=80&w=1000"
+      },
+      {
+        id: 6,
+        name: "Vancouver Marathon",
+        date: "2025-05-04",
+        location: "Vancouver, BC",
+        distance: "Full",
+        lat: 49.2827,
+        lng: -123.1207,
+        image: "https://images.unsplash.com/photo-1565609040768-3e648b49f21b?auto=format&fit=crop&q=80&w=1000"
+      },
+      {
+        id: 7,
+        name: "Miami Marathon",
+        date: "2026-02-01 (TBD)",
+        location: "Miami, FL",
+        distance: "Full",
+        lat: 25.7617,
+        lng: -80.1918,
+        image: "https://images.unsplash.com/photo-1535498730771-e735b998cd64?auto=format&fit=crop&q=80&w=1000"
+      },
+      {
+        id: 8,
+        name: "San Francisco Marathon",
+        date: "2025-07-27 (TBD)",
+        location: "San Francisco, CA",
+        distance: "Full",
+        lat: 37.7749,
+        lng: -122.4194,
+        image: "https://images.unsplash.com/photo-1501594907352-04cda38ebc29?auto=format&fit=crop&q=80&w=1000"
+      },
+      {
+        id: 9,
+        name: "TCS Toronto Waterfront Marathon",
+        date: "2025-10-19",
+        location: "Toronto, ON",
+        distance: "Full",
+        lat: 43.651070,
+        lng: -79.347015,
+        image: "https://images.unsplash.com/photo-1517090504673-94bd49985430?auto=format&fit=crop&q=80&w=1000"
+      },
+      {
+        id: 10,
+        name: "Honolulu Marathon",
+        date: "2025-12-14",
+        location: "Honolulu, HI",
+        distance: "Full",
+        lat: 21.30694,
+        lng: -157.85833,
+        image: "https://images.unsplash.com/photo-1542259681-d262296f63e5?auto=format&fit=crop&q=80&w=1000"
+      },
+      {
+        id: 11,
+        name: "Ottawa Race Weekend",
+        date: "2025-05-25",
+        location: "Ottawa, ON",
+        distance: "Full",
+        lat: 45.424721,
+        lng: -75.695000,
+        image: "https://images.unsplash.com/photo-1582650625119-3a31f8fa2699?auto=format&fit=crop&q=80&w=1000"
+      },
+      {
+        id: 12,
+        name: "Beneve Montreal Marathon",
+        date: "2025-09-21",
+        location: "Montreal, QC",
+        distance: "Full",
+        lat: 45.508888,
+        lng: -73.561668,
+        image: "https://images.unsplash.com/photo-1519178173668-2f63c5e4a3d3?auto=format&fit=crop&q=80&w=1000"
+      },
+      {
+        id: 13,
+        name: "Servus Calgary Marathon",
+        date: "2025-05-25",
+        location: "Calgary, AB",
+        distance: "Full",
+        lat: 51.05011,
+        lng: -114.08529,
+        image: "https://images.unsplash.com/photo-1596727147705-54a9d0c2067d?auto=format&fit=crop&q=80&w=1000"
+      },
+      {
+        id: 14,
+        name: "Royal Victoria Marathon",
+        date: "2025-10-12",
+        location: "Victoria, BC",
+        distance: "Full",
+        lat: 48.407326,
+        lng: -123.329773,
+        image: "https://images.unsplash.com/photo-1565609040768-3e648b49f21b?auto=format&fit=crop&q=80&w=1000"
+      },
+      {
+        id: 15,
+        name: "Quebec City Marathon",
+        date: "2025-10-05",
+        location: "Quebec City, QC",
+        distance: "Full",
+        lat: 46.81389,
+        lng: -71.20806,
+        image: "https://images.unsplash.com/photo-1535498730771-e735b998cd64?auto=format&fit=crop&q=80&w=1000"
+      },
+      {
+        id: 16,
+        name: "Blue Nose Marathon",
+        date: "2025-05-18",
+        location: "Halifax, NS",
+        distance: "Full",
+        lat: 44.651070,
+        lng: -63.582687,
+        image: "https://images.unsplash.com/photo-1501594907352-04cda38ebc29?auto=format&fit=crop&q=80&w=1000"
+      },
+      {
+        id: 17,
+        name: "Manitoba Marathon",
+        date: "2025-06-15",
+        location: "Winnipeg, MB",
+        distance: "Full",
+        lat: 49.895077,
+        lng: -97.138451,
+        image: "https://images.unsplash.com/photo-1552674605-469523254d5d?auto=format&fit=crop&q=80&w=1000"
+      },
+      {
+        id: 18,
+        name: "Edmonton Marathon",
+        date: "2025-08-17",
+        location: "Edmonton, AB",
+        distance: "Full",
+        lat: 53.631611,
+        lng: -113.323975,
+        image: "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&q=80&w=1000"
+      },
+      {
+        id: 19,
+        name: "Niagara Falls Marathon",
+        date: "2025-10-26",
+        location: "Niagara Falls, ON",
+        distance: "Full",
+        lat: 43.089806,
+        lng: -79.086380,
+        image: "https://images.unsplash.com/photo-1505373877733-3e648b49f21b?auto=format&fit=crop&q=80&w=1000"
+      },
+      {
+        id: 20,
+        name: "Hamilton Road2Hope",
+        date: "2025-11-02",
+        location: "Hamilton, ON",
+        distance: "Full",
+        lat: 43.255203,
+        lng: -79.843826,
+        image: "https://images.unsplash.com/photo-1516214104703-d870798883c5?auto=format&fit=crop&q=80&w=1000"
+      },
+      {
+        id: 21,
+        name: "Houston Turkey Dash",
+        date: "2025-11-27",
+        location: "Houston, TX",
+        distance: "Half",
+        lat: 29.7604,
+        lng: -95.3698,
+        image: "https://images.unsplash.com/photo-1535498730771-e735b998cd64?auto=format&fit=crop&q=80&w=1000"
+      },
+      {
+        id: 22,
+        name: "Community First Thanksgiving Distance Classic",
+        date: "2025-11-27",
+        location: "Jacksonville, FL",
+        distance: "Half",
+        lat: 30.3322,
+        lng: -81.6557,
+        image: "https://images.unsplash.com/photo-1552674605-469523254d5d?auto=format&fit=crop&q=80&w=1000"
+      },
+      {
+        id: 23,
+        name: "CRC Fort Worth Thanksgiving Day Run",
+        date: "2025-11-27",
+        location: "Fort Worth, TX",
+        distance: "Half",
+        lat: 32.7555,
+        lng: -97.3308,
+        image: "https://images.unsplash.com/photo-1505373877733-3e648b49f21b?auto=format&fit=crop&q=80&w=1000"
+      },
+      {
+        id: 24,
+        name: "Feast and Feathers Trail Races",
+        date: "2025-11-27",
+        location: "Omaha, NE",
+        distance: "Half",
+        lat: 41.2565,
+        lng: -95.9345,
+        image: "https://images.unsplash.com/photo-1516214104703-d870798883c5?auto=format&fit=crop&q=80&w=1000"
+      },
+      {
+        id: 25,
+        name: "Invesco QQQ Thanksgiving Day Half Marathon",
+        date: "2025-11-27",
+        location: "Atlanta, GA",
+        distance: "Half",
+        lat: 33.7490,
+        lng: -84.3880,
+        image: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAMCAMAAABV0m3JAAACx1BMVEWHbWCIho+pmYycweCMvOiMvOeKuueMueSHt+aFteWEs+KCseCAr95+rtp9q9eBpsqOqr+AmrFkfJNtiqNxXlJ6ZVm0ppamy[...]"
+      },
+      {
+        id: 26,
+        name: "Medal Madness Williamsburg",
+        date: "2025-11-27",
+        location: "Williamsburg, VA",
+        distance: "Half",
+        lat: 37.2707,
+        lng: -76.7075,
+        image: "https://images.unsplash.com/photo-1596727147705-54a9d0c2067d?auto=format&fit=crop&q=80&w=1000"
+      },
+      {
+        id: 27,
+        name: "Medal Madness DeBary",
+        date: "2025-11-27",
+        location: "DeBary, FL",
+        distance: "Half",
+        lat: 28.8958,
+        lng: -81.3328,
+        image: "https://images.unsplash.com/photo-1565609040768-3e648b49f21b?auto=format&fit=crop&q=80&w=1000"
+      }
+    ];
+  </script>
 
-    <script type="text/babel">
-        const { useState, useEffect, useMemo } = React;
-
-        const RaceList = ({ races, onSelectRace, completedRaces }) => {
-            return (
-                <div className="race-list">
-                    {races.map(race => {
-                        const isCompleted = completedRaces[race.id];
-                        return (
-                            <div
-                                key={race.id}
-                                className={`race-card ${isCompleted ? 'completed' : ''}`}
-                                onClick={() => onSelectRace(race)}
-                            >
-                                <div className="race-header">
-                                    <span className="race-name">{race.name}</span>
-                                    {isCompleted && <span className="badge">✓ Done</span>}
-                                </div>
-                                <div className="race-details">
-                                    <span>📅 {race.date}</span>
-                                    <span>📍 {race.location}</span>
-                                    <span>🏃 {race.distance}</span>
-                                </div>
-                                <button className="action-btn btn-view">
-                                    View Details
-                                </button>
-                            </div>
-                        );
-                    })}
-                </div>
-            );
-        };
-
-        const RaceMap = ({ races, selectedRace, onSelectRace, onOpenSidebar, completedRaces }) => {
-            useEffect(() => {
-                if (!document.getElementById('map')) return;
-
-                if (window.mapInstance) {
-                    window.mapInstance.remove();
-                    window.mapInstance = null;
-                }
-
-                const map = L.map('map', {
-                    minZoom: 2,
-                    maxBounds: [[-90, -180], [90, 180]],
-                    maxBoundsViscosity: 1.0
-                }).setView([39.8283, -98.5795], 4);
-
-                L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-                    subdomains: 'abcd',
-                    maxZoom: 19,
-                    noWrap: true,
-                    bounds: [[-90, -180], [90, 180]]
-                }).addTo(map);
-
-                const markers = [];
-                races.forEach(race => {
-                    const isCompleted = completedRaces[race.id];
-                    const color = isCompleted ? '#22c55e' : '#38bdf8';
-
-                    const markerHtml = `
-                        <div style="
-                            background-color: ${color};
-                            width: 12px;
-                            height: 12px;
-                            border-radius: 50%;
-                            border: 2px solid white;
-                            box-shadow: 0 0 4px rgba(0,0,0,0.5);
-                        "></div>
-                    `;
-
-                    const icon = L.divIcon({
-                        className: 'custom-marker',
-                        html: markerHtml,
-                        iconSize: [12, 12],
-                        iconAnchor: [6, 6]
-                    });
-
-                    const marker = L.marker([race.lat, race.lng], { icon })
-                        .addTo(map)
-                        .bindPopup(`<b>${race.name}</b><br>${race.location}`)
-                        .on('click', () => {
-                            onSelectRace(race);
-                            onOpenSidebar();
-                        });
-
-                    markers.push({ id: race.id, marker });
-                });
-
-                window.mapInstance = map;
-                window.markers = markers;
-
-                return () => {
-                    if (window.mapInstance) {
-                        window.mapInstance.remove();
-                        window.mapInstance = null;
-                    }
-                };
-            }, [races, completedRaces, onSelectRace, onOpenSidebar]);
-
-            useEffect(() => {
-                if (selectedRace && window.mapInstance) {
-                    window.mapInstance.flyTo([selectedRace.lat, selectedRace.lng], 10);
-
-                    const markerObj = window.markers && window.markers.find(m => m.id === selectedRace.id);
-                    if (markerObj) markerObj.marker.openPopup();
-                }
-            }, [selectedRace]);
-
-            return <div id="map" style={{ height: '100%', width: '100%' }} />;
-        };
-
-        const RaceDetailsModal = ({ race, onClose, onSave, completedData }) => {
-            const [dateCompleted, setDateCompleted] = useState(completedData?.dateCompleted || '');
-            const [review, setReview] = useState(completedData?.review || '');
-            const [photoUrl, setPhotoUrl] = useState(completedData?.photoUrl || '');
-
-            useEffect(() => {
-                setDateCompleted(completedData?.dateCompleted || '');
-                setReview(completedData?.review || '');
-                setPhotoUrl(completedData?.photoUrl || '');
-            }, [completedData]);
-
-            const handleSubmit = (e) => {
-                e.preventDefault();
-                onSave(race.id, { dateCompleted, review, photoUrl });
-                onClose();
-            };
-
-            return (
-                <div className="modal-overlay" role="dialog" aria-modal="true">
-                    <div className="modal">
-                        <div className="modal-header">
-                            <h2>{race.name}</h2>
-                            <button className="close-btn" onClick={onClose}>&times;</button>
-                        </div>
-
-                        <div className="race-info" style={{ marginBottom: '1.5rem' }}>
-                            <p><strong>Next Race Date:</strong> {race.date}</p>
-                            <p><strong>Location:</strong> {race.location}</p>
-                            <p><strong>Distance:</strong> {race.distance}</p>
-                        </div>
-
-                        {completedData ? (
-                            <div>
-                                <div className="badge" style={{ display: 'inline-block', marginBottom: '1rem', fontSize: '1rem' }}>
-                                    ✓ Race Completed
-                                </div>
-
-                                {completedData.dateCompleted && (
-                                    <p style={{ color: 'var(--text-muted)', marginBottom: '0.5rem' }}>
-                                        <strong>Completed on:</strong> {new Date(completedData.dateCompleted).toLocaleDateString()}
-                                    </p>
-                                )}
-
-                                {completedData.review && (
-                                    <div className="review-display">
-                                        <p className="review-text">"{completedData.review}"</p>
-                                    </div>
-                                )}
-
-                                {completedData.photoUrl && (
-                                    <img src={completedData.photoUrl} alt="Race memory" className="review-img" />
-                                )}
-
-                                <button
-                                    className="action-btn"
-                                    style={{ marginTop: '1rem', background: '#ef4444', color: 'white' }}
-                                    onClick={() => {
-                                        onSave(race.id, null);
-                                        onClose();
-                                    }}
-                                >
-                                    Remove Pin
-                                </button>
-                            </div>
-                        ) : (
-                            <form onSubmit={handleSubmit}>
-                                <div className="form-group">
-                                    <label>When did you finish this race?</label>
-                                    <input
-                                        type="date"
-                                        className="form-control"
-                                        value={dateCompleted}
-                                        onChange={e => setDateCompleted(e.target.value)}
-                                        required
-                                    />
-                                </div>
-
-                                <div className="form-group">
-                                    <label>Your Review (Optional)</label>
-                                    <textarea
-                                        className="form-control"
-                                        value={review}
-                                        onChange={e => setReview(e.target.value)}
-                                    />
-                                </div>
-
-                                <div className="form-group">
-                                    <label>Photo URL (Optional)</label>
-                                    <input
-                                        type="url"
-                                        className="form-control"
-                                        value={photoUrl}
-                                        onChange={e => setPhotoUrl(e.target.value)}
-                                    />
-                                </div>
-
-                                <button type="submit" className="btn-submit">Save</button>
-                            </form>
-                        )}
-                    </div>
-                </div>
-            );
-        };
-
-        const App = () => {
-            const [races, setRaces] = useState(window.initialRaces || []);
-            const [filter, setFilter] = useState('All');
-            const [selectedRace, setSelectedRace] = useState(null);
-            const [sidebarOpen, setSidebarOpen] = useState(false);
-            const [completedRaces, setCompletedRaces] = useState(() => {
-                const saved = localStorage.getItem('my-running-map-data');
-                return saved ? JSON.parse(saved) : {};
-            });
-
-            useEffect(() => {
-                localStorage.setItem('my-running-map-data', JSON.stringify(completedRaces));
-            }, [completedRaces]);
-
-            const filteredRaces = useMemo(() => {
-                if (filter === 'All') return races;
-                return races.filter(r => r.distance === filter);
-            }, [races, filter]);
-
-            const handleSaveRace = (raceId, data) => {
-                setCompletedRaces(prev => {
-                    if (data === null) {
-                        const newState = { ...prev };
-                        delete newState[raceId];
-                        return newState;
-                    }
-                    return { ...prev, [raceId]: data };
-                });
-            };
-
-            const completedCount = Object.keys(completedRaces).length;
-
-            return (
-                <React.Fragment>
-                    <header>
-                        <div>
-                            <h1>My Running Map 🏃‍♂️</h1>
-                            <div className="stats">
-                                You have completed <strong>{completedCount}</strong> races!
-                            </div>
-                        </div>
-                        <a href="https://github.com" target="_blank" rel="noreferrer" style={{ color: 'var(--text-muted)', textDecoration: 'none' }}>
-                            About
-                        </a>
-                    </header>
-
-                    <main>
-                        <div className={`sidebar-wrapper ${sidebarOpen ? 'active' : ''}`}>
-                            <div className="sidebar">
-                                <button
-                                    className="sidebar-close"
-                                    onClick={() => setSidebarOpen(false)}
-                                    title="Close sidebar"
-                                >
-                                    ×
-                                </button>
-                                <div className="sidebar-header">
-                                    <h3>Races</h3>
-                                    <div className="filter-container">
-                                        <select
-                                            className="filter-select"
-                                            value={filter}
-                                            onChange={(e) => setFilter(e.target.value)}
-                                        >
-                                            <option value="All">All Distances</option>
-                                            <option value="Full">Full Marathon</option>
-                                            <option value="Half">Half Marathon</option>
-                                        </select>
-                                    </div>
-                                </div>
-                                <RaceList
-                                    races={filteredRaces}
-                                    onSelectRace={(race) => {
-                                        setSelectedRace(race);
-                                        setSidebarOpen(false);
-                                    }}
-                                    completedRaces={completedRaces}
-                                />
-                            </div>
-                        </div>
-
-                        <div className="map-container">
-                            <RaceMap
-                                races={filteredRaces}
-                                selectedRace={selectedRace}
-                                onSelectRace={setSelectedRace}
-                                onOpenSidebar={() => setSidebarOpen(true)}
-                                completedRaces={completedRaces}
-                            />
-                        </div>
-                    </main>
-
-                    {selectedRace && (
-                        <RaceDetailsModal
-                            race={selectedRace}
-                            onClose={() => setSelectedRace(null)}
-                            onSave={handleSaveRace}
-                            completedData={completedRaces[selectedRace.id]}
-                        />
-                    )}
-                </React.Fragment>
-            );
-        };
-
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
-    </script>
+  <!-- Load your React app (app.js contains JSX) -->
+  <!-- Babel will transpile it at runtime because type="text/babel" -->
+  <script type="text/babel" src="app.js"></script>
 </body>
-
 </html>
