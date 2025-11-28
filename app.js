@@ -54,13 +54,12 @@ const RaceMap = ({ races, selectedRace, onSelectRace, onOpenSidebar, completedRa
     // Check container exists
     if (!document.getElementById('map')) return;
 
-    const map = L.map('map', {
-      minZoom: 2,
-      worldCopyJump: true, // help panning across antimeridian
-      // relaxed bounds (avoid strict maxBounds that can block panning on mobile)
-      // maxBounds: [[-90, -180], [90, 180]],
-      // maxBoundsViscosity: 0.5,
-    }).setView([39.8283, -98.5795], 4); // Center of USA
+   const map = L.map('map', {
+    tap: true,
+    touchZoom: true,
+    dragging: true,
+    tapTolerance: 15
+}).setView([39.8283, -98.5795], 4); // Center of USA
 
     // Ensure mobile interactions are enabled
     try {
@@ -392,15 +391,21 @@ const App = () => {
           </div>
         </div>
 
-        <div className="map-container">
-          <RaceMap
-            races={filteredRaces}
-            selectedRace={selectedRace}
-            onSelectRace={(race) => { setSelectedRace(race); }}
-            onOpenSidebar={() => setSidebarOpen(true)}
-            completedRaces={completedRaces}
-          />
-        </div>
+       <div className="map-container">
+    <button 
+        className="menu-button" 
+        onClick={() => {/* TODO: Add sidebar toggle */}}
+        aria-label="Open menu"
+    >
+        ☰
+    </button>
+    <RaceMap
+        races={filteredRaces}
+        selectedRace={selectedRace}
+        onSelectRace={setSelectedRace}
+        completedRaces={completedRaces}
+    />
+</div>
       </main>
 
       {selectedRace && (
